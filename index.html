@@ -1,9 +1,234 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <title>ISHAN WILL LOSE AT CHESS</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Space Dodger</title>
+  <style>
+    body {
+      margin: 0;
+      overflow: hidden;
+      background: black;
+      font-family: Arial, sans-serif;
+      color: white;
+    }
+
+    canvas {
+      display: block;
+      background: linear-gradient(to bottom, #000010, #000000);
+    }
+
+    #ui {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      font-size: 22px;
+      z-index: 10;
+    }
+
+    #gameOver {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      text-align: center;
+      display: none;
+      z-index: 20;
+    }
+
+    button {
+      padding: 12px 20px;
+      font-size: 18px;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+      background: #00aaff;
+      color: white;
+      margin-top: 10px;
+    }
+
+    button:hover {
+      background: #0088cc;
+    }
+  </style>
 </head>
 <body>
-  <h1>ISHAN WILL LOSE AT CHESS</h1>
+  <div id="ui">Score: <span id="score">0</span></div>
+
+  <div id="gameOver">
+    <h1>Game Over</h1>
+    <h2>Your Score: <span id="finalScore"></span></h2>
+    <button onclick="restartGame()">Play Again</button>
+  </div>
+
+  <canvas id="gameCanvas"></canvas>
+
+  <script>
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+
+    let score = 0;
+    let gameRunning = true;
+
+    const player = {
+      x: canvas.width / 2,
+      y: canvas.height - 120,
+      width: 50,
+      height: 50,
+      speed: 8
+    };
+
+    const keys = {};
+    const asteroids = [];
+    const stars = [];
+
+    for (let i = 0; i < 120; i++) {
+      stars.push({
+        x: Math.random() * canvas.width,
+        y: Math.random() * canvas.height,
+        size: Math.random() * 2
+      });
+    }
+
+    document.addEventListener('keydown', (e) => {
+      keys[e.key] = true;
+    });
+
+    document.addEventListener('keyup', (e) => {
+      keys[e.key] = false;
+    });
+
+    function drawPlayer() {
+      ctx.fillStyle = '#00ffff';
+
+      ctx.beginPath();
+      ctx.moveTo(player.x, player.y);
+      ctx.lineTo(player.x - 25, player.y + 50);
+      ctx.lineTo(player.x + 25, player.y + 50);
+      ctx.closePath();
+      ctx.fill();
+
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(player.x - 5, player.y + 15, 10, 20);
+    }
+
+    function drawStars() {
+      ctx.fillStyle = 'white';
+      stars.forEach(star => {
+        ctx.fillRect(star.x, star.y, star.size, star.size);
+        star.y += 1;
+
+        if (star.y > canvas.height) {
+          star.y = 0;
+          star.x = Math.random() * canvas.width;
+        }
+      });
+    }
+
+    function movePlayer() {
+      if (keys['ArrowLeft'] || keys['a']) {
+        player.x -= player.speed;
+      }
+
+      if (keys['ArrowRight'] || keys['d']) {
+        player.x += player.speed;
+      }
+
+      if (keys['ArrowUp'] || keys['w']) {
+        player.y -= player.speed;
+      }
+
+      if (keys['ArrowDown'] || keys['s']) {
+        player.y += player.speed;
+      }
+
+      if (player.x < 25) player.x = 25;
+      if (player.x > canvas.width - 25) player.x = canvas.width - 25;
+      if (player.y < 0) player.y = 0;
+      if (player.y > canvas.height - 50) player.y = canvas.height - 50;
+    }
+
+    function spawnAsteroid() {
+      asteroids.push({
+        x: Math.random() * (canvas.width - 40),
+        y: -40,
+        size: 20 + Math.random() * 30,
+        speed: 3 + Math.random() * 5
+      });
+    }
+
+    function drawAsteroids() {
+      ctx.fillStyle = '#888888';
+
+      for (let i = asteroids.length - 1; i >= 0; i--) {
+        const a = asteroids[i];
+
+        ctx.beginPath();
+        ctx.arc(a.x, a.y, a.size, 0, Math.PI * 2);
+        ctx.fill();
+
+        a.y += a.speed;
+
+        if (a.y > canvas.height + 50) {
+          asteroids.splice(i, 1);
+          score++;
+          document.getElementById('score').innerText = score;
+        }
+
+        if (
+          player.x < a.x + a.size &&
+          player.x + player.width > a.x - a.size &&
+          player.y < a.y + a.size &&
+          player.y + player.height > a.y - a.size
+        ) {
+          endGame();
+        }
+      }
+    }
+
+    function endGame() {
+      gameRunning = false;
+      document.getElementById('finalScore').innerText = score;
+      document.getElementById('gameOver').style.display = 'block';
+    }
+
+    function restartGame() {
+      asteroids.length = 0;
+      score = 0;
+      player.x = canvas.width / 2;
+      player.y = canvas.height - 120;
+      document.getElementById('score').innerText = score;
+      document.getElementById('gameOver').style.display = 'none';
+      gameRunning = true;
+      animate();
+    }
+
+    function animate() {
+      if (!gameRunning) return;
+
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      drawStars();
+      movePlayer();
+      drawPlayer();
+      drawAsteroids();
+
+      requestAnimationFrame(animate);
+    }
+
+    setInterval(() => {
+      if (gameRunning) spawnAsteroid();
+    }, 700);
+
+    animate();
+
+    window.addEventListener('resize', () => {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+    });
+  </script>
 </body>
 </html>
